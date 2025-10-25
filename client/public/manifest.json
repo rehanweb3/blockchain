@@ -1,0 +1,46 @@
+{
+  "id": "/",
+  "name": "Mintrax Network",
+  "short_name": "Mintrax",
+  "description": "Mintrax Network is a gateway to next-generation mining — a fast, secure, and modern platform that makes crypto mining accessible and efficient for everyone.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "/images/MTT.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/MTT.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Get Started",
+      "short_name": "Start",
+      "url": "/start",
+      "icons": [{ "src": "/images/MTT.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Support Portal",
+      "short_name": "Support",
+      "url": "https://support.mintrax.network",
+      "icons": [{ "src": "/images/MTT.png", "sizes": "96x96" }]
+    }
+  ]
+}
