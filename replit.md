@@ -50,6 +50,19 @@ This is a full-stack blockchain explorer that provides:
 
 ## Recent Changes
 
+- **2025-10-25**: Implemented Token Metadata Admin Panel
+  - Extended tokens schema with `description` and `website` fields in PostgreSQL
+  - Created public API endpoint `GET /api/token/:address` with rate limiting (60 requests/minute)
+  - Returns JSON response with: name, symbol, logo_url, description, website, verified status
+  - Added admin route `POST /api/admin/update-token-metadata` with JWT authentication
+  - Implemented comprehensive admin dashboard UI for managing token metadata
+  - New "Manage Tokens" tab in admin panel with inline editing functionality
+  - Added form validation using Zod schemas (description max 1000 chars, website URL validation)
+  - Green verified checkmark badge (✓) displayed on approved tokens across all pages
+  - Rate limiting middleware protects public endpoints from abuse
+  - Secure JWT authentication ensures only admins can modify token metadata
+  - Database migration safely applied using `npm run db:push --force`
+
 - **2025-10-22**: Added transaction charts and visualization to dashboard
   - Created `/api/transaction/daily-stats` endpoint for daily transaction aggregation
   - Added `getDailyTransactionStats()` storage method with date grouping and aggregation
