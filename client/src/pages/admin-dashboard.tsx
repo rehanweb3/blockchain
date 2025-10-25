@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Image, CheckCircle2, XCircle, LogOut, Coins } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Shield, Image, CheckCircle2, XCircle, LogOut, Coins, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatTimestamp, truncateAddress } from "@/lib/utils";
 import type { Token } from "@shared/schema";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface AdminStats {
   pendingLogos: number;
@@ -178,7 +181,7 @@ export default function AdminDashboard() {
 
       {/* Logo Review Section */}
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pending" data-testid="tab-pending">
             Pending ({stats?.pendingLogos || 0})
           </TabsTrigger>
@@ -187,6 +190,9 @@ export default function AdminDashboard() {
           </TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-rejected">
             Rejected
+          </TabsTrigger>
+          <TabsTrigger value="manage" data-testid="tab-manage">
+            Manage Tokens
           </TabsTrigger>
         </TabsList>
 
@@ -312,7 +318,225 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="manage">
+          <TokenMetadataManager />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function TokenMetadataManager() {
+  const { toast } = useToast();
+  const [editingToken, setEditingToken] = useState<Token | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    symbol: "",
+    description: "",
+    website: "",
+  });
+
+  const { data: tokens, isLoading } = useQuery<Token[]>({
+    queryKey: ["/api/tokens"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: { tokenAddress: string; name?: string; symbol?: string; description?: string; website?: string }) => {
+      return apiRequest("POST", "/api/admin/update-token-metadata", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tokens"] });
+      toast({
+        title: "Success",
+        description: "Token metadata updated successfully",
+      });
+      setEditingToken(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update token metadata",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (token: Token) => {
+    setEditingToken(token);
+    setFormData({
+      name: token.name,
+      symbol: token.symbol,
+      description: token.description || "",
+      website: token.website || "",
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingToken) return;
+
+    updateMutation.mutate({
+      tokenAddress: editingToken.address,
+      name: formData.name,
+      symbol: formData.symbol,
+      description: formData.description,
+      website: formData.website,
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Edit className="h-5 w-5" />
+          Manage Token Metadata
+        </CardTitle>
+        <CardDescription>
+          Edit token information including name, symbol, description, and website
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {editingToken && (
+          <Card className="mb-6 border-primary">
+            <CardHeader>
+              <CardTitle>Edit Token</CardTitle>
+              <CardDescription>Update metadata for {editingToken.symbol}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Token Name"
+                      data-testid="input-token-name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="symbol">Symbol</Label>
+                    <Input
+                      id="symbol"
+                      value={formData.symbol}
+                      onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
+                      placeholder="TKN"
+                      data-testid="input-token-symbol"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    placeholder="https://example.com"
+                    data-testid="input-token-website"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Token description (max 1000 characters)"
+                    rows={4}
+                    maxLength={1000}
+                    data-testid="input-token-description"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {formData.description.length}/1000 characters
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    data-testid="button-save-metadata"
+                  >
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingToken(null)}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        ) : tokens && tokens.length > 0 ? (
+          <div className="space-y-2">
+            {tokens.map((token) => (
+              <Card key={token.address} data-testid={`token-row-${token.address}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{token.symbol}</h3>
+                        {token.logoStatus === "approved" && (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" data-testid={`verified-${token.address}`} />
+                        )}
+                      </div>
+                      <Badge variant="secondary">{token.name}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="text-sm font-mono text-muted-foreground">
+                        {truncateAddress(token.address)}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(token)}
+                        data-testid={`button-edit-${token.address}`}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                  {(token.description || token.website) && (
+                    <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                      {token.description && <p>{token.description}</p>}
+                      {token.website && (
+                        <a href={token.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {token.website}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No tokens found</h3>
+            <p className="text-muted-foreground">
+              No tokens have been created yet
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

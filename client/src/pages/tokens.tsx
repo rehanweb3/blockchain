@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Coins, Search } from "lucide-react";
+import { Coins, Search, CheckCircle2 } from "lucide-react";
 import { truncateAddress, formatWei } from "@/lib/utils";
 import { useState } from "react";
 import type { Token } from "@shared/schema";
@@ -91,7 +91,12 @@ export default function Tokens() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg truncate">{token.symbol}</CardTitle>
+                            <div className="flex items-center gap-1">
+                              <CardTitle className="text-lg truncate">{token.symbol}</CardTitle>
+                              {token.logoStatus === "approved" && (
+                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" data-testid={`verified-badge-${token.address}`} />
+                              )}
+                            </div>
                             <CardDescription className="truncate">{token.name}</CardDescription>
                           </div>
                         </div>
