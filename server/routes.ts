@@ -11,11 +11,13 @@ import path from "path";
 import fs from "fs";
 import solc from "solc";
 import { ethers } from "ethers";
+import rateLimit from "express-rate-limit";
 import {
   loginAdminSchema,
   verifyContractSchema,
   submitLogoSchema,
   contractReadSchema,
+  updateTokenMetadataSchema,
 } from "@shared/schema";
 import { generateERC20Source, ERC20_ABI } from "./erc20-template";
 import dotenv from "dotenv";
@@ -70,6 +72,14 @@ function verifyAdminToken(req: any, res: any, next: any) {
     return res.status(401).json({ error: "Invalid token" });
   }
 }
+
+const publicApiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  message: { error: "Too many requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -260,6 +270,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
       
       res.json(tokensWithLogo);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/token/:address", publicApiLimiter, async (req, res) => {
+    try {
+      const address = req.params.address;
+      
+      if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return res.status(400).json({ error: "Invalid token address format" });
+      }
+
+      const token = await storage.getToken(address);
+      
+      if (!token) {
+        return res.status(404).json({ error: "Token not found" });
+      }
+
+      const response = {
+        name: token.name,
+        symbol: token.symbol,
+        logo_url: token.logoStatus === "approved" && token.logoUrl 
+          ? token.logoUrl 
+          : null,
+        description: token.description || "",
+        website: token.website || "",
+        verified: token.logoStatus === "approved",
+      };
+
+      res.json(response);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -860,6 +901,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/update-token-metadata", verifyAdminToken, async (req: any, res) => {
+    try {
+      const validatedData = updateTokenMetadataSchema.parse(req.body);
+      const { tokenAddress, name, symbol, description, website } = validatedData;
+
+      const token = await storage.getToken(tokenAddress);
+      if (!token) {
+        return res.status(404).json({ error: "Token not found" });
+      }
+
+      const updates: Partial<typeof token> = {};
+      if (name !== undefined) updates.name = name;
+      if (symbol !== undefined) updates.symbol = symbol;
+      if (description !== undefined) updates.description = description;
+      if (website !== undefined) updates.website = website;
+
+      await storage.updateTokenMetadata(tokenAddress, updates);
+
+      res.json({ success: true, message: "Token metadata updated successfully" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

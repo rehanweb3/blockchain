@@ -44,6 +44,7 @@ export interface IStorage {
   getTokens(): Promise<Token[]>;
   getTokensByLogoStatus(status: string): Promise<Token[]>;
   updateTokenLogoStatus(address: string, status: string, reviewedBy: string): Promise<void>;
+  updateTokenMetadata(address: string, updates: Partial<Token>): Promise<void>;
   
   insertTokenTransfer(transfer: InsertTokenTransfer): Promise<TokenTransfer>;
   
@@ -320,6 +321,13 @@ export class DatabaseStorage implements IStorage {
         reviewedAt: new Date(),
         reviewedBy,
       })
+      .where(eq(schema.tokens.address, address));
+  }
+
+  async updateTokenMetadata(address: string, updates: Partial<Token>): Promise<void> {
+    await db
+      .update(schema.tokens)
+      .set(updates)
       .where(eq(schema.tokens.address, address));
   }
 

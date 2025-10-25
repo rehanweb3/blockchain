@@ -84,6 +84,8 @@ export const tokens = pgTable("tokens", {
   symbol: varchar("symbol", { length: 20 }).notNull(),
   decimals: integer("decimals").notNull(),
   totalSupply: varchar("total_supply", { length: 78 }),
+  description: text("description"),
+  website: text("website"),
   logoUrl: text("logo_url"),
   logoStatus: varchar("logo_status", { length: 20 }).notNull().default("no_logo"),
   submittedBy: varchar("submitted_by", { length: 42 }),
@@ -288,6 +290,14 @@ export const contractReadSchema = z.object({
   args: z.array(z.any()).optional().default([]),
 });
 
+export const updateTokenMetadataSchema = z.object({
+  tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  name: z.string().min(1).max(100).optional(),
+  symbol: z.string().min(1).max(20).optional(),
+  description: z.string().max(1000).optional(),
+  website: z.string().url().optional().or(z.literal("")),
+});
+
 // Export types
 export type Block = typeof blocks.$inferSelect;
 export type InsertBlock = z.infer<typeof insertBlockSchema>;
@@ -322,3 +332,4 @@ export type LoginAdmin = z.infer<typeof loginAdminSchema>;
 export type VerifyContract = z.infer<typeof verifyContractSchema>;
 export type SubmitLogo = z.infer<typeof submitLogoSchema>;
 export type ContractRead = z.infer<typeof contractReadSchema>;
+export type UpdateTokenMetadata = z.infer<typeof updateTokenMetadataSchema>;
